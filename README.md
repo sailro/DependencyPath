@@ -25,6 +25,7 @@ OPTIONS:
     -r, --recurse    Recurse sub-directories
         --verbose    Verbose
     -d, --depth      Max search depth
+    -p, --path       Assembly search path
 
 COMMANDS:
     scan <assemblies> <dependency>    Scan assemblies
@@ -33,7 +34,7 @@ COMMANDS:
 ## Demo
 
 ```
-dependency-path SyntaxTree*.dll NewtonSoft.Json --depth 3 --version
+dependency-path SyntaxTree*.dll NewtonSoft.Json --depth 3 -t b77a5c561934e089 -t cc7b13ffcd2ddd51
 
 SyntaxTree.VisualStudio.Unity.CodeLens -> Microsoft.VisualStudio.Language -> Newtonsoft.Json
 SyntaxTree.VisualStudio.Unity -> Newtonsoft.Json

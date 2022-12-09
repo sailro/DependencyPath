@@ -37,4 +37,8 @@ internal class ScanCommandSettings : CommandSettings
 	[CommandOption("-d|--depth")]
 	[DefaultValue(8)]
 	public int Depth { get; set; }
+
+	[Description("Assembly search path")]
+	[CommandOption("-p|--path")]
+	public string[]? SearchPaths { get; set; }
 }

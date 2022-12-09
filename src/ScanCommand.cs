@@ -29,6 +29,7 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 			var resolver = new DefaultAssemblyResolver();
 			var directories = assemblies
 				.Select(Path.GetDirectoryName)
+				.Concat(settings.SearchPaths ?? Array.Empty<string>())
 				.Distinct();
 
 			foreach (var directory in directories)

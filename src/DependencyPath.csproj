@@ -16,11 +16,13 @@
     <NeutralLanguage>en-US</NeutralLanguage>
     <Authors>Sebastien Lebreton</Authors>
     <PackageTags>assembly;reference;transitive;dependency;tool</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/sailro/DependencyPath</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <VersionPrefix>1.0.1</VersionPrefix>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,6 +37,10 @@
 
   <ItemGroup>
     <Using Include="JetBrains.Annotations" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)../README.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 
 </Project>
