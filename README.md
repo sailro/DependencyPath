@@ -35,11 +35,11 @@ COMMANDS:
 ```
 dependency-path SyntaxTree*.dll NewtonSoft.Json --depth 3 --version
 
-SyntaxTree.VisualStudio.Unity.CodeLens (17.5.0.0) -> Microsoft.VisualStudio.Language (17.0.0.0) -> Newtonsoft.Json (13.0.0.0)
-SyntaxTree.VisualStudio.Unity (17.5.0.0) -> Newtonsoft.Json (13.0.0.0)
-SyntaxTree.VisualStudio.Unity (17.5.0.0) -> Microsoft.VisualStudio.LanguageServices (4.3.0.0) -> Newtonsoft.Json (13.0.0.0)
-SyntaxTree.VisualStudio.Unity (17.5.0.0) -> Microsoft.VisualStudio.Telemetry (16.0.0.0) -> Newtonsoft.Json (13.0.0.0)
-SyntaxTree.VisualStudio.Unity (17.5.0.0) -> Microsoft.VisualStudio.Language (17.0.0.0) -> Newtonsoft.Json (13.0.0.0)
-SyntaxTree.VisualStudio.Unity (17.5.0.0) -> Microsoft.VisualStudio.Utilities (17.0.0.0) -> Newtonsoft.Json (13.0.0.0)
-SyntaxTree.VisualStudio.Unity.Tests (0.0.0.0) -> SyntaxTree.VisualStudio.Unity (17.5.0.0) -> Newtonsoft.Json (13.0.0.0)
+SyntaxTree.VisualStudio.Unity.CodeLens -> Microsoft.VisualStudio.Language -> Newtonsoft.Json
+SyntaxTree.VisualStudio.Unity -> Newtonsoft.Json
+SyntaxTree.VisualStudio.Unity -> Microsoft.VisualStudio.LanguageServices -> Newtonsoft.Json
+SyntaxTree.VisualStudio.Unity -> Microsoft.VisualStudio.Telemetry -> Newtonsoft.Json
+SyntaxTree.VisualStudio.Unity -> Microsoft.VisualStudio.Language -> Newtonsoft.Json
+SyntaxTree.VisualStudio.Unity -> Microsoft.VisualStudio.Utilities -> Newtonsoft.Json
+SyntaxTree.VisualStudio.Unity.Tests -> SyntaxTree.VisualStudio.Unity -> Newtonsoft.Json
 ```
