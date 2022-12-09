@@ -12,7 +12,7 @@ public static class Program
 		{
 			config
 				.AddCommand<ScanCommand>("scan")
-				.WithDescription("Scan repositories");
+				.WithDescription("Scan assemblies");
 
 		});
 
