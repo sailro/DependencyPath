@@ -2,51 +2,42 @@
 using Spectre.Console;
 using Mono.Cecil;
 using Mono.Collections.Generic;
+using System.Collections.Concurrent;
+using System.Text;
+using Humanizer;
 
 namespace DependencyPath;
 
 [UsedImplicitly]
 internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 {
-	private ScanCommandSettings Settings { get; set; } = null!;
-	private ReaderParameters Parameters { get; set; } = null!;
+	private ScanCommandSettings _settings = null!;
+	private ReaderParameters _parameters = null!;
+
+	private readonly ConcurrentAssemblyResolver _resolver = new();
+	private readonly ConcurrentDictionary<string /* fullname */, AssemblyNameReference> _skipList = new();
+	private readonly ConcurrentBag<string> _results = new();
 
 	public override Task<int> ExecuteAsync(CommandContext context, ScanCommandSettings settings)
 	{
 		try
 		{
-			Settings = settings;
+			_settings = settings;
 
-			var path = Path.GetDirectoryName(settings.Assemblies);
-			if (string.IsNullOrEmpty(path))
-				path = ".";
+			var assemblies = SearchAssemblies(settings);
+			SetupAssemblyResolver(settings, assemblies);
 
-			var searchPattern = Path.GetFileName(settings.Assemblies);
-			var assemblies = Directory
-				.EnumerateFiles(path, searchPattern, settings.Recurse ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)
-				.ToArray();
+			AnsiConsole
+				.Status()
+				.Spinner(Spinner.Known.Star)
+				.SpinnerStyle(Style.Parse("green bold"))
+				.Start($"Searching [green]{settings.Dependency}[/] dependency in [blue]{"assembly".ToQuantity(assemblies.Length)}[/] ...", ctx =>
+				{
+					Parallel.ForEach(assemblies, VisitAssemblyFile);
+					ctx.Refresh();
+				});
 
-			var resolver = new DefaultAssemblyResolver();
-			var directories = assemblies
-				.Select(Path.GetDirectoryName)
-				.Concat(settings.SearchPaths ?? Array.Empty<string>())
-				.Distinct();
-
-			foreach (var directory in directories)
-				resolver.AddSearchDirectory(directory);
-
-			Parameters = new ReaderParameters
-			{
-				AssemblyResolver = resolver,
-				ReadWrite = false,
-				InMemory = true,
-				ReadingMode = ReadingMode.Deferred,
-				ReadSymbols = false,
-			};
-
-			foreach (var assembly in assemblies)
-				VisitAssemblyFile(assembly);
-
+			DisplayResults();
 			return Task.FromResult(0);
 		}
 		catch (Exception ex)
@@ -54,16 +45,57 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 			AnsiConsole.WriteException(ex, ExceptionFormats.ShortenEverything);
 			return Task.FromResult(1);
 		}
+		finally
+		{
+			_results.Clear();
+			_skipList.Clear();
+			_resolver.Dispose();
+		}
+	}
+
+	private static string[] SearchAssemblies(ScanCommandSettings settings)
+	{
+		var path = Path.GetDirectoryName(settings.Assemblies);
+		if (string.IsNullOrEmpty(path))
+			path = ".";
+
+		var searchPattern = Path.GetFileName(settings.Assemblies);
+		var assemblies = Directory.EnumerateFiles(path, searchPattern, settings.Recurse ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)
+			.ToArray();
+		
+		return assemblies;
+	}
+
+	private void SetupAssemblyResolver(ScanCommandSettings settings, string[] assemblies)
+	{
+		var directories = assemblies
+			.Select(Path.GetDirectoryName)
+			.Concat(settings.SearchPaths ?? Array.Empty<string>())
+			.Distinct();
+
+		foreach (var directory in directories)
+			_resolver.AddSearchDirectory(directory);
+
+		_parameters = new ReaderParameters
+		{
+			AssemblyResolver = _resolver,
+			ReadWrite = false,
+			InMemory = true,
+			ReadingMode = ReadingMode.Deferred,
+			ReadSymbols = false,
+		};
 	}
 
 	private void VisitAssemblyFile(string assemblyFile)
 	{
 		try
 		{
-			if (Settings.Verbose)
+			if (_settings.Verbose)
 				AnsiConsole.MarkupLine($"[gray]Processing: {assemblyFile}[/]");
 
-			var assembly = AssemblyDefinition.ReadAssembly(assemblyFile, Parameters);
+			var assembly = AssemblyDefinition.ReadAssembly(assemblyFile, _parameters);
+			_resolver.RegisterAssembly(assembly);
+
 			VisitAssembly(assembly, Array.Empty<AssemblyDefinition>());
 		}
 		catch (Exception ex)
@@ -74,10 +106,10 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 
 	private void VisitAssembly(AssemblyDefinition assembly, AssemblyDefinition[] path)
 	{
-		if (path.Length >= Settings.Depth)
+		if (path.Length >= _settings.Depth)
 			return;
 
-		if (Settings.Tokens != null && Settings.Tokens.Contains(assembly.Name.GetPublicKeyTokenAsString()))
+		if (_settings.Tokens != null && _settings.Tokens.Contains(assembly.Name.GetPublicKeyTokenAsString()))
 			return;
 
 		var name = assembly.Name.Name;
@@ -87,10 +119,9 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 			.ToArray();
 
 		if (Matches(name))
-			DisplayResult(path);
+			OnDependencyPathFound(path);
 
-		foreach (var module in assembly.Modules)
-			VisitModule(module, path);
+		Parallel.ForEach(assembly.Modules, module => VisitModule(module, path));
 	}
 
 	private void VisitModule(ModuleDefinition module, AssemblyDefinition[] path)
@@ -100,42 +131,54 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 
 	private void VisitAssemblyNameReferences(Collection<AssemblyNameReference> assemblyNameReferences, AssemblyDefinition[] path)
 	{
-		foreach (var assemblyNameReference in assemblyNameReferences)
-			VisitAssemblyNameReference(assemblyNameReference, path);
+		Parallel.ForEach(assemblyNameReferences, assemblyNameReference => VisitAssemblyNameReference(assemblyNameReference, path));
 	}
 
 	private void VisitAssemblyNameReference(AssemblyNameReference assemblyNameReference, AssemblyDefinition[] path)
 	{
 		try
 		{
-			var assembly = Parameters.AssemblyResolver.Resolve(assemblyNameReference);
+			if (_skipList.TryGetValue(assemblyNameReference.FullName, out _))
+				return;
+
+			var assembly = _parameters.AssemblyResolver.Resolve(assemblyNameReference);
+			
 			VisitAssembly(assembly, path);
 		}
-		catch (Exception)
+		catch (AssemblyResolutionException)
 		{
-			if (Settings.Verbose)
+			_skipList.TryAdd(assemblyNameReference.FullName, assemblyNameReference);
+
+			if (_settings.Verbose)
 				AnsiConsole.MarkupLine($"[yellow]Warning: unable to resolve {assemblyNameReference}[/]");
 		}
 	}
 
 	private bool Matches(string name)
 	{
-		return Settings.Dependency.Equals(name, StringComparison.OrdinalIgnoreCase);
+		return _settings.Dependency.Equals(name, StringComparison.OrdinalIgnoreCase);
 	}
 
-	private void DisplayResult(AssemblyDefinition[] path)
+	private void OnDependencyPathFound(AssemblyDefinition[] path)
 	{
+		var sb = new StringBuilder();
 		for (var i = 0; i < path.Length; i++)
 		{
 			if (i > 0)
-				AnsiConsole.Markup(" [grey]->[/] ");
+				sb.Append(" [grey]->[/] ");
 
 			var color = i == 0 ? "blue" : i == path.Length - 1 ? "green" : "white";
-			AnsiConsole.Markup($"[{color}]{path[i].Name.Name}[/]");
-			if (Settings.DisplayVersions)
-				AnsiConsole.Markup($" [teal]({path[i].Name.Version})[/]");
+			sb.Append($"[{color}]{path[i].Name.Name}[/]");
+			if (_settings.DisplayVersions)
+				sb.Append($" [teal]({path[i].Name.Version})[/]");
 		}
 
-		AnsiConsole.MarkupLine(string.Empty);
+		_results.Add(sb.ToString());
+	}
+
+	private void DisplayResults()
+	{
+		foreach (var result in _results.OrderBy(r => r))
+			AnsiConsole.MarkupLine(result);
 	}
 }

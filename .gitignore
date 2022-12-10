@@ -2,3 +2,5 @@
 /src/obj
 /src/bin
 /src/nupkg
+*.csproj.user
+/*/Properties/launchSettings.json
