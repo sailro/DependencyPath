@@ -1,5 +1,6 @@
 # DependencyPath
-Find transitive dependencies in assemblies
+[![NuGet](https://img.shields.io/nuget/v/DependencyPath.svg)](https://www.nuget.org/packages/DependencyPath/)
+Find transitive dependencies in assemblies.
 
 ## Installation
 
