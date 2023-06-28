@@ -20,13 +20,14 @@ ARGUMENTS:
     <dependency>    Dependency to search
 
 OPTIONS:
-    -h, --help       Prints help information
-    -v, --version    Display versions
-    -t, --token      Skip public key token
-    -r, --recurse    Recurse sub-directories
-        --verbose    Verbose
-    -d, --depth      Max search depth
-    -p, --path       Assembly search path
+    -h,  --help           Prints help information
+    -v,  --version        Display resolved versions
+    -a,  --version-all    Display expected and resolved versions
+    -t,  --token          Skip public key token
+    -r,  --recurse        Recurse sub-directories
+         --verbose        Verbose
+    -d,  --depth          Max search depth
+    -p,  --path           Assembly search path
 
 COMMANDS:
     scan <assemblies> <dependency>    Scan assemblies

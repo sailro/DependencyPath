@@ -22,7 +22,7 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <VersionPrefix>1.1.0</VersionPrefix>
+    <VersionPrefix>1.1.2</VersionPrefix>
   </PropertyGroup>
 
   <ItemGroup>
@@ -32,8 +32,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Mono.Cecil" Version="0.11.4" />
-    <PackageReference Include="Spectre.Console.Cli" Version="0.45.0" />
+    <PackageReference Include="Mono.Cecil" Version="0.11.5" />
+    <PackageReference Include="Spectre.Console.Cli" Version="0.47.0" />
   </ItemGroup>
 
   <ItemGroup>

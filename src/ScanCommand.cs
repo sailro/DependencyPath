@@ -18,6 +18,18 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 	private readonly ConcurrentDictionary<string /* fullname */, AssemblyNameReference> _skipList = new();
 	private readonly ConcurrentBag<string> _results = new();
 
+	private static void ForEach<T>(IEnumerable<T> items, Action<T> action)
+	{
+#if DEBUG
+		foreach (var item in items)
+		{
+			action(item);
+		}
+#else
+		Parallel.ForEach(items, action);
+#endif
+	}
+
 	public override Task<int> ExecuteAsync(CommandContext context, ScanCommandSettings settings)
 	{
 		try
@@ -33,7 +45,7 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 				.SpinnerStyle(Style.Parse("green bold"))
 				.Start($"Searching [green]{settings.Dependency}[/] dependency in [blue]{"assembly".ToQuantity(assemblies.Length)}[/] ...", ctx =>
 				{
-					Parallel.ForEach(assemblies, VisitAssemblyFile);
+					ForEach(assemblies, VisitAssemblyFile);
 					ctx.Refresh();
 				});
 
@@ -121,7 +133,7 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 		if (Matches(name))
 			OnDependencyPathFound(path);
 
-		Parallel.ForEach(assembly.Modules, module => VisitModule(module, path));
+		ForEach(assembly.Modules, module => VisitModule(module, path));
 	}
 
 	private void VisitModule(ModuleDefinition module, AssemblyDefinition[] path)
@@ -131,7 +143,7 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 
 	private void VisitAssemblyNameReferences(Collection<AssemblyNameReference> assemblyNameReferences, AssemblyDefinition[] path)
 	{
-		Parallel.ForEach(assemblyNameReferences, assemblyNameReference => VisitAssemblyNameReference(assemblyNameReference, path));
+		ForEach(assemblyNameReferences, assemblyNameReference => VisitAssemblyNameReference(assemblyNameReference, path));
 	}
 
 	private void VisitAssemblyNameReference(AssemblyNameReference assemblyNameReference, AssemblyDefinition[] path)
@@ -168,9 +180,22 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 				sb.Append(" [grey]->[/] ");
 
 			var color = i == 0 ? "blue" : i == path.Length - 1 ? "green" : "white";
-			sb.Append($"[{color}]{path[i].Name.Name}[/]");
-			if (_settings.DisplayVersions)
-				sb.Append($" [teal]({path[i].Name.Version})[/]");
+			var current = path[i];
+			var previous = i == 0 ? null : path[i-1];
+
+			sb.Append($"[{color}]{current.Name.Name}[/]");
+			if (_settings.DisplayVersions || _settings.DisplayAllVersions)
+			{
+				var resolved = current.Name.Version;
+				var expected = previous == null || !_settings.DisplayAllVersions ? resolved : previous.Modules.SelectMany(module => module.AssemblyReferences.Where(reference => reference.Name == current.Name.Name)).FirstOrDefault()?.Version ?? resolved;
+
+				sb.Append($" [teal]({expected}");
+				if (expected != resolved)
+				{
+					sb.Append($"/{resolved}");
+				}
+				sb.Append(")[/]");
+			}
 		}
 
 		_results.Add(sb.ToString());

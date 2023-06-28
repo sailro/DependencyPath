@@ -14,10 +14,15 @@ internal class ScanCommandSettings : CommandSettings
 	[CommandArgument(0, "<dependency>")]
 	public string Dependency { get; set; } = string.Empty;
 
-	[Description("Display versions")]
+	[Description("Display resolved versions")]
 	[CommandOption("-v|--version")]
 	[DefaultValue(false)]
 	public bool DisplayVersions { get; set; }
+
+	[Description("Display expected and resolved versions")]
+	[CommandOption("-a|--version-all")]
+	[DefaultValue(false)]
+	public bool DisplayAllVersions { get; set; }
 
 	[Description("Skip public key token")]
 	[CommandOption("-t|--token")]
