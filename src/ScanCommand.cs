@@ -187,7 +187,11 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 			if (_settings.DisplayVersions || _settings.DisplayAllVersions)
 			{
 				var resolved = current.Name.Version;
-				var expected = previous == null || !_settings.DisplayAllVersions ? resolved : previous.Modules.SelectMany(module => module.AssemblyReferences.Where(reference => reference.Name == current.Name.Name)).FirstOrDefault()?.Version ?? resolved;
+				var reference = previous?.Modules
+					.SelectMany(module => module.AssemblyReferences.Where(reference => reference.Name == current.Name.Name))
+					.FirstOrDefault();
+
+				var expected = reference == null || !_settings.DisplayAllVersions ? resolved : reference.Version;
 
 				sb.Append($" [teal]({expected}");
 				if (expected != resolved)
