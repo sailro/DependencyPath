@@ -5,7 +5,7 @@ namespace DependencyPath;
 
 internal class ConcurrentAssemblyResolver : BaseAssemblyResolver
 {
-	private readonly IDictionary<string, AssemblyDefinition> _cache;
+	private readonly ConcurrentDictionary<string, AssemblyDefinition> _cache;
 
 	public ConcurrentAssemblyResolver()
 	{
@@ -25,8 +25,7 @@ internal class ConcurrentAssemblyResolver : BaseAssemblyResolver
 
 	public void RegisterAssembly(AssemblyDefinition assembly)
 	{
-		if (assembly == null)
-			throw new ArgumentNullException(nameof(assembly));
+		ArgumentNullException.ThrowIfNull(assembly);
 
 		var name = assembly.Name.FullName;
 		if (_cache.ContainsKey(name))

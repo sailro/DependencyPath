@@ -16,7 +16,7 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 
 	private readonly ConcurrentAssemblyResolver _resolver = new();
 	private readonly ConcurrentDictionary<string /* fullname */, AssemblyNameReference> _skipList = new();
-	private readonly ConcurrentBag<string> _results = new();
+	private readonly ConcurrentBag<string> _results = [];
 
 	private static void ForEach<T>(IEnumerable<T> items, Action<T> action)
 	{
@@ -82,7 +82,7 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 	{
 		var directories = assemblies
 			.Select(Path.GetDirectoryName)
-			.Concat(settings.SearchPaths ?? Array.Empty<string>())
+			.Concat(settings.SearchPaths ?? [])
 			.Distinct();
 
 		foreach (var directory in directories)
@@ -108,7 +108,7 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 			var assembly = AssemblyDefinition.ReadAssembly(assemblyFile, _parameters);
 			_resolver.RegisterAssembly(assembly);
 
-			VisitAssembly(assembly, Array.Empty<AssemblyDefinition>());
+			VisitAssembly(assembly, []);
 		}
 		catch (Exception ex)
 		{
@@ -126,9 +126,7 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 
 		var name = assembly.Name.Name;
 
-		path = path
-			.Append(assembly)
-			.ToArray();
+		path = [.. path, assembly];
 
 		if (Matches(name))
 			OnDependencyPathFound(path);
