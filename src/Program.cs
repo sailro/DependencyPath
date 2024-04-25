@@ -13,7 +13,6 @@ public static class Program
 			config
 				.AddCommand<ScanCommand>("scan")
 				.WithDescription("Scan assemblies");
-
 		});
 
 		return await app.RunAsync(args);

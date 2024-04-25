@@ -17,6 +17,7 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 	private readonly ConcurrentAssemblyResolver _resolver = new();
 	private readonly ConcurrentDictionary<string /* fullname */, AssemblyNameReference> _skipList = new();
 	private readonly ConcurrentBag<string> _results = [];
+	private int _unableToResolveCount;
 
 	private static void ForEach<T>(IEnumerable<T> items, Action<T> action)
 	{
@@ -35,6 +36,7 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 		try
 		{
 			_settings = settings;
+			_unableToResolveCount = 0;
 
 			var assemblies = SearchAssemblies(settings);
 			SetupAssemblyResolver(settings, assemblies);
@@ -161,6 +163,8 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 
 			if (_settings.Verbose)
 				AnsiConsole.MarkupLine($"[yellow]Warning: unable to resolve {assemblyNameReference}[/]");
+
+			_unableToResolveCount++;
 		}
 	}
 
@@ -207,5 +211,10 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 	{
 		foreach (var result in _results.OrderBy(r => r))
 			AnsiConsole.MarkupLine(result);
+
+		if (!_settings.Verbose && _unableToResolveCount > 0)
+		{
+			AnsiConsole.MarkupLine($"Found {"issue".ToQuantity(_unableToResolveCount)} while resolving assemblies, use --verbose for details");
+		}
 	}
 }
