@@ -74,7 +74,7 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 		var searchPattern = Path.GetFileName(settings.Assemblies);
 		var assemblies = Directory.EnumerateFiles(path, searchPattern, settings.Recurse ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)
 			.ToArray();
-		
+
 		return assemblies;
 	}
 
@@ -152,7 +152,7 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 				return;
 
 			var assembly = _parameters.AssemblyResolver.Resolve(assemblyNameReference);
-			
+
 			VisitAssembly(assembly, path);
 		}
 		catch (AssemblyResolutionException)
@@ -172,38 +172,52 @@ internal class ScanCommand : AsyncCommand<ScanCommandSettings>
 		var sb = new StringBuilder();
 		for (var i = 0; i < path.Length; i++)
 		{
-			if (i > 0)
+			var color = GetColor(i, path);
+			var current = path[i];
+			var previous = i == 0 ? null : path[i - 1];
+
+			if (previous != null)
 				sb.Append(" [grey]->[/] ");
 
-			var color = i == 0 ? "blue" : i == path.Length - 1 ? "green" : "white";
-			var current = path[i];
-			var previous = i == 0 ? null : path[i-1];
-
 			sb.Append($"[{color}]{current.Name.Name}[/]");
-			if (_settings.DisplayVersions || _settings.DisplayAllVersions)
-			{
-				var resolved = current.Name.Version;
-				var reference = previous?.Modules
-					.SelectMany(module => module.AssemblyReferences.Where(reference => reference.Name == current.Name.Name))
-					.FirstOrDefault();
 
-				var expected = reference == null || !_settings.DisplayAllVersions ? resolved : reference.Version;
-
-				sb.Append($" [teal]({expected}");
-				if (expected != resolved)
-				{
-					sb.Append($"/{resolved}");
-				}
-				sb.Append(")[/]");
-			}
+			if (_settings is not { DisplayVersions: false, DisplayAllVersions: false })
+				AppendVersion(sb, current, previous);
 		}
 
 		_results.Add(sb.ToString());
 	}
 
+	private void AppendVersion(StringBuilder sb, AssemblyDefinition current, AssemblyDefinition? previous)
+	{
+		var resolved = current.Name.Version;
+		var reference = previous?.Modules
+			.SelectMany(module => module.AssemblyReferences.Where(reference => reference.Name == current.Name.Name))
+			.FirstOrDefault();
+
+		var expected = reference == null || !_settings.DisplayAllVersions ? resolved : reference.Version;
+
+		sb.Append($" [teal]({expected}");
+
+		if (expected != resolved)
+			sb.Append($"/{resolved}");
+
+		sb.Append(")[/]");
+	}
+
+	private static string GetColor(int i, AssemblyDefinition[] path)
+	{
+		return i switch
+		{
+			0 => "blue",
+			_ when i == path.Length - 1 => "green",
+			_ => "white"
+		};
+	}
+
 	private void DisplayResults()
 	{
-		foreach (var result in _results.OrderBy(r => r))
+		foreach (var result in _results.OrderBy(r => r).Distinct())
 			AnsiConsole.MarkupLine(result);
 
 		if (!_settings.Verbose && !_skipList.IsEmpty)
