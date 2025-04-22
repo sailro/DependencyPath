@@ -33,7 +33,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Mono.Cecil" Version="0.11.6" />
-    <PackageReference Include="Spectre.Console.Cli" Version="0.49.1" />
+    <PackageReference Include="Spectre.Console.Cli" Version="0.50.0" />
   </ItemGroup>
 
   <ItemGroup>
